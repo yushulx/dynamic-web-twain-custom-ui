@@ -110,42 +110,42 @@
     </div>
 
     <script>
+      var selectSources = document.getElementById("sources");
       var data = [];
+      var sourceList = [];
       var imageList = document.getElementById("image-list");
       Dynamsoft.DWT.ProductKey = "DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==";
       Dynamsoft.DWT.ResourcesPath = "node_modules/dwt/dist/";
       var dwtObject = null;
       Dynamsoft.DWT.CreateDWTObjectEx({ "WebTwainId": "container" }, (obj) => {
         dwtObject = obj;
-        // dwtObject.Viewer.bind(document.getElementById("document-container"));
-        // dwtObject.Viewer.show();
         onReady();
       }, (errorString) => {
         console.log(errorString);
-       });
+      });
 
       function onReady() {
         if (dwtObject != null) {
 
           dwtObject.IfShowUI = false;
 
-          dwtObject.GetDevicesAsync(Dynamsoft.DWT.EnumDWT_DeviceType.TWAINSCANNER|Dynamsoft.DWT.EnumDWT_DeviceType.ESCLSCANNER).then((sources)=>{
-            console.log(sources);
-            selectSources = document.getElementById("sources");
-          selectSources.options.length = 0;
-          for (let i = 0; i < sources.length; i++) {
-            let option = document.createElement("option");
-            option.text = sources[i].displayName;
-            option.value = i.toString();
-            selectSources.add(option);
-          }
-          }).then((result)=>{
-              console.log(result)
-          }).catch((e)=>{
-              console.error(e)
+          dwtObject.GetDevicesAsync(Dynamsoft.DWT.EnumDWT_DeviceType.TWAINSCANNER | Dynamsoft.DWT.EnumDWT_DeviceType.ESCLSCANNER).then((sources) => {
+            sourceList = sources;
+
+            selectSources.options.length = 0;
+            for (let i = 0; i < sources.length; i++) {
+              let option = document.createElement("option");
+              option.text = sources[i].displayName;
+              option.value = i.toString();
+              selectSources.add(option);
+            }
+          }).then((result) => {
+            console.log(result)
+          }).catch((e) => {
+            console.error(e)
           })
 
-          
+
         }
       }
 
@@ -276,16 +276,7 @@
         if (!dwtObject)
           return;
 
-        else if (dwtObject.SourceCount > 0 && selectSources && dwtObject.SelectSourceByIndex(selectSources.selectedIndex)) {
-          const onAcquireImageSuccess = () => {
-            if (dwtObject) {
-              updateImage();
-              dwtObject.CloseSource();
-            }
-          };
-          const onAcquireImageFailure = onAcquireImageSuccess;
-          dwtObject.OpenSource();
-          let pixelType = '2';
+        else if (selectSources) {
           var pixelTypeInputs = document.getElementsByName("PixelType");
           for (var i = 0; i < pixelTypeInputs.length; i++) {
             if ((pixelTypeInputs[i]).checked) {
@@ -293,12 +284,40 @@
               break;
             }
           }
-          dwtObject.AcquireImage({
-            // IfFeederEnabled: document.getElementById("ADF").checked,
-            // PixelType: pixelType,
-            // Resolution: parseInt(document.getElementById("Resolution").value),
-            // IfDisableSourceAfterAcquire: true
-          }, onAcquireImageSuccess, onAcquireImageFailure);
+          dwtObject.SelectDeviceAsync(sourceList[selectSources.selectedIndex]).then(() => {
+
+            return dwtObject.OpenSourceAsync()
+
+          }).then(() => {
+
+            return dwtObject.AcquireImageAsync({
+              IfFeederEnabled: document.getElementById("ADF").checked,
+              PixelType: pixelType,
+              Resolution: parseInt(document.getElementById("Resolution").value),
+              IfDisableSourceAfterAcquire: true
+            })
+
+          }).then(() => {
+
+            if (dwtObject) {
+
+              updateImage();
+
+              dwtObject.CloseSource();
+
+            }
+
+          })
+
+            .catch(
+
+              (e) => {
+
+                console.error(e)
+
+              }
+
+            )
         } else {
           alert("No Source Available!");
         }
