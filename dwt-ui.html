@@ -58,7 +58,7 @@
 </head>
 
 <body>
-  <h1> Dynamic Web TWAIN without UI Binding</h1>
+  <h1> Dynamic Web TWAIN Sample</h1>
   <div class="row">
     <label for="BW">
       <input type="radio" value="0" name="PixelType">B&amp;W </label>
@@ -93,21 +93,7 @@
     <button onclick="downloadDocument()">Download Documents</button>
   </div>
 
-  <!-- <div id="document-container"></div> -->
-
-  <div class="row">
-    <div class="full-img">
-      <img id="document-image">
-
-    </div>
-    <select id="image-list" size="2" onchange="onSelectChange(value)">
-    </select>
-  </div>
-
-
-  <div class="thumb-bar" id="thumb-bar">
-    <div class="thumb-box" id="thumb-box">
-    </div>
+  <div id="document-container" width="640px" height="640px"></div>
 
     <script>
       var selectSources = document.getElementById("sources");
@@ -119,6 +105,11 @@
       var dwtObject = null;
       Dynamsoft.DWT.CreateDWTObjectEx({ "WebTwainId": "container" }, (obj) => {
         dwtObject = obj;
+        
+        dwtObject.Viewer.bind(document.getElementById("document-container"));
+        dwtObject.Viewer.width = 640;
+        dwtObject.Viewer.height = 640;
+        dwtObject.Viewer.show();
         onReady();
       }, (errorString) => {
         console.log(errorString);
@@ -143,74 +134,18 @@
         }
       }
 
-      function onSelectChange(e) {
-        let image = document.getElementById("document-image");
-        image.src = e;
-        currentURL = e;
-        let index = data.indexOf(e);
-        if (index != -1 && index >= 4) {
-          document.querySelector("#thumb-bar").scrollLeft = document.querySelector("#thumb-box").offsetWidth * (index - 4 + 1);
-        }
-        else {
-          document.querySelector("#thumb-bar").scrollLeft = 0;
-        }
-      }
-
       function removeAll() {
         if (!dwtObject || dwtObject.HowManyImagesInBuffer == 0)
           return;
 
         dwtObject.RemoveAllImages();
-        data = [];
-
-        let thumbnails = document.getElementById("thumb-box");
-        while (thumbnails.firstChild) {
-          thumbnails.removeChild(thumbnails.firstChild);
-        }
-
-        if (imageList) {
-          while (imageList.firstChild) {
-            imageList.removeChild(imageList.firstChild);
-          }
-        }
-
-        let image = document.getElementById("document-image");
-        image.src = "";
       }
 
       function removeSelected() {
         if (!dwtObject || dwtObject.HowManyImagesInBuffer == 0)
           return;
 
-        let index = data.indexOf(currentURL);
-        if (index != -1) {
-          removedData = data.splice(index, 1);
-
-          let image = document.getElementById("document-image");
-
-          let thumbnails = document.getElementById("thumb-box");
-          thumbnails.removeChild(thumbnails.childNodes[index + 1]);
-
-          dwtObject.RemoveImage(index);
-          imageList.remove(index);
-
-          if (dwtObject.HowManyImagesInBuffer > 0) {
-            if (index == 0) {
-              image.src = data[index];
-            }
-            else {
-              image.src = data[index - 1];
-            }
-
-            currentURL = image.src;
-            imageList[data.indexOf(currentURL)].selected = true;
-          }
-          else {
-            image.src = "";
-            currentURL = "";
-          }
-
-        }
+        dwtObject.RemoveImage(dwtObject.CurrentImageIndexInBuffer);
       }
 
       function openImage() {
@@ -218,52 +153,6 @@
           return;
         dwtObject.Addon.PDF.SetConvertMode(Dynamsoft.DWT.EnumDWT_ConvertMode.CM_RENDERALL);
         let ret = dwtObject.LoadImageEx("", Dynamsoft.DWT.EnumDWT_ImageType.IT_ALL);
-        if (ret) updateImage();
-      }
-
-      function updateImage() {
-        if (dwtObject) {
-          let currentLen = data.length;
-          let added = dwtObject.HowManyImagesInBuffer - currentLen;
-          if (added > 0) {
-            for (let i = 0; i < added; i++) {
-              let url = dwtObject.GetImageURL(currentLen);
-              let image = document.getElementById("document-image");
-              image.src = url;
-              currentURL = url;
-              data.push(url);
-
-              let option = document.createElement("option");
-              option.selected = true;
-              option.text = url;
-              option.value = url;
-              imageList.add(option);
-
-              let thumbnails = document.getElementById("thumb-box");
-              let newImage = document.createElement('img');
-              newImage.setAttribute('src', url);
-              if (thumbnails != null) {
-                thumbnails.appendChild(newImage);
-                newImage.addEventListener('click', e => {
-                  if (e != null && e.target != null) {
-                    let target = e.target;
-                    image.src = target.src;
-                    currentURL = target.src;
-                    imageList[data.indexOf(target.src)].selected = true;
-                  }
-                });
-              }
-
-              if (dwtObject.HowManyImagesInBuffer > 4) {
-                document.querySelector("#thumb-bar").scrollLeft = document.querySelector("#thumb-box").offsetWidth * (dwtObject.HowManyImagesInBuffer - 4);
-              }
-
-              currentLen += 1;
-            }
-          }
-
-
-        }
       }
 
       function acquireImage() {
@@ -295,15 +184,11 @@
 
             if (dwtObject) {
 
-              updateImage();
-
               dwtObject.CloseSource();
 
             }
 
-          })
-
-            .catch(
+          }).catch(
 
               (e) => {
 
@@ -318,8 +203,7 @@
       }
 
       function downloadDocument() {
-        let image = document.getElementById("document-image");
-        if (dwtObject && image.src != null) {
+        if (dwtObject) {
           if ((document.getElementById("imgTypejpeg")).checked == true) {
             if (dwtObject.GetImageBitDepth(data.indexOf(image.src)) == 1)
               dwtObject.ConvertToGrayScale(data.indexOf(image.src));
