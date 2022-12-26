@@ -93,6 +93,8 @@
     <button onclick="downloadDocument()">Download Documents</button>
   </div>
 
+  <!-- <div id="document-container"></div> -->
+
   <div class="row">
     <div class="full-img">
       <img id="document-image">
@@ -110,28 +112,40 @@
     <script>
       var data = [];
       var imageList = document.getElementById("image-list");
-      Dynamsoft.DWT.ProductKey = "LICENSE-KEY";
+      Dynamsoft.DWT.ProductKey = "DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==";
       Dynamsoft.DWT.ResourcesPath = "node_modules/dwt/dist/";
       var dwtObject = null;
       Dynamsoft.DWT.CreateDWTObjectEx({ "WebTwainId": "container" }, (obj) => {
         dwtObject = obj;
+        // dwtObject.Viewer.bind(document.getElementById("document-container"));
+        // dwtObject.Viewer.show();
         onReady();
-      }, (errorString) => { });
+      }, (errorString) => {
+        console.log(errorString);
+       });
 
       function onReady() {
         if (dwtObject != null) {
 
           dwtObject.IfShowUI = false;
 
-          let sources = dwtObject.GetSourceNames();
-          selectSources = document.getElementById("sources");
+          dwtObject.GetDevicesAsync(Dynamsoft.DWT.EnumDWT_DeviceType.TWAINSCANNER|Dynamsoft.DWT.EnumDWT_DeviceType.ESCLSCANNER).then((sources)=>{
+            console.log(sources);
+            selectSources = document.getElementById("sources");
           selectSources.options.length = 0;
           for (let i = 0; i < sources.length; i++) {
             let option = document.createElement("option");
-            option.text = sources[i];
+            option.text = sources[i].displayName;
             option.value = i.toString();
             selectSources.add(option);
           }
+          }).then((result)=>{
+              console.log(result)
+          }).catch((e)=>{
+              console.error(e)
+          })
+
+          
         }
       }
 
@@ -280,10 +294,10 @@
             }
           }
           dwtObject.AcquireImage({
-            IfFeederEnabled: document.getElementById("ADF").checked,
-            PixelType: pixelType,
-            Resolution: parseInt(document.getElementById("Resolution").value),
-            IfDisableSourceAfterAcquire: true
+            // IfFeederEnabled: document.getElementById("ADF").checked,
+            // PixelType: pixelType,
+            // Resolution: parseInt(document.getElementById("Resolution").value),
+            // IfDisableSourceAfterAcquire: true
           }, onAcquireImageSuccess, onAcquireImageFailure);
         } else {
           alert("No Source Available!");
