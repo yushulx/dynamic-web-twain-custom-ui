@@ -109,7 +109,7 @@
         if (!dwtObject)
           return;
 
-        else if (selectSources) {
+        if (selectSources) {
           var pixelTypeInputs = document.getElementsByName("PixelType");
           for (var i = 0; i < pixelTypeInputs.length; i++) {
             if ((pixelTypeInputs[i]).checked) {
