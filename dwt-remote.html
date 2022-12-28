@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Dynamsoft Remote Scan</title>
+  <script src="node_modules/dwt/dist/dynamsoft.webtwain.min.js"></script>
+</head>
+
+<body>
+  <h1> Dynamic Web TWAIN Remote Scan</h1>
+  <div>Remote Dynamsoft Services:<select size="1" id="selServices" style="position: relative; width: 240px;"
+      onchange="selectedServices();"></select></div>
+  <div>Available Scanners:<select size="1" id="selDevices" style="position: relative; width: 240px;"></select></div>
+  <button onclick="acquireImage()">Scan Documents</button>
+  <button onclick="openImage()">Load Documents</button>
+  <button onclick="removeSelected()">Remove Selected</button>
+  <button onclick="removeAll()">Remove All</button>
+
+  <div class="row">
+    <label style="font-size: x-large;">
+      <input type="radio" value="jpg" name="ImageType" id="imgTypejpeg" />JPEG</label>
+    <label style="font-size: x-large;">
+      <input type="radio" value="tif" name="ImageType" id="imgTypetiff" />TIFF</label>
+    <label style="font-size: x-large;">
+      <input type="radio" value="pdf" name="ImageType" id="imgTypepdf" checked="checked" />PDF</label>
+    <button onclick="downloadDocument()">Download Documents</button>
+  </div>
+  <div id="document-container"></div>
+  <script type="text/javascript">
+    var dwtRemoteScanObject, allServices, allDevices;
+    var url = 'https://xiao.scannerproxy.com'; // Configure your domain name on https://www.dynamsoft.com/customer/account/certificate
+    // var url = 'http://192.168.0.129'; // Local IP address can work with HTTP
+    Dynamsoft.DWT.ProductKey = "DLS2eyJoYW5kc2hha2VDb2RlIjoiMjAwMDAxLTE2NDk4Mjk3OTI2MzUiLCJvcmdhbml6YXRpb25JRCI6IjIwMDAwMSIsInNlc3Npb25QYXNzd29yZCI6IndTcGR6Vm05WDJrcEQ5YUoifQ==";
+    Dynamsoft.DWT.ResourcesPath = "node_modules/dwt/dist/";
+    var dwtObject = null;
+    Dynamsoft.DWT.CreateDWTObjectEx({ "WebTwainId": "container" }, (obj) => {
+      dwtObject = obj;
+
+      dwtObject.Viewer.bind(document.getElementById("document-container"));
+      dwtObject.Viewer.width = 640;
+      dwtObject.Viewer.height = 640;
+      dwtObject.Viewer.show();
+      onReady();
+    }, (errorString) => {
+      console.log(errorString);
+    });
+
+    function onReady() {
+      Dynamsoft.DWT.FindDynamsoftServiceAsync(url).then(function (services) {
+        allServices = services;
+        if (services && services.length > 0) {
+          var ddlService, i = 0;
+          ddlService = document.getElementById('selServices');
+          ddlService.options.length = 0;
+          ddlService.options.add(new Option('--Select a service--', '-1'));
+
+          for (; i < services.length; i++) {
+            var service = services[i];
+            ddlService.options.add(new Option(service.attrs.ty, i));
+          }
+
+          ddlService.selectedIndex = 0;
+        }
+      }, function (err) {
+        console.log(err);
+      });
+    }
+
+    function acquireImage() {
+      if (dwtRemoteScanObject) {
+        var selDevices = document.getElementById('selDevices');
+        if (selDevices) {
+          if (selDevices.selectedIndex - 1 >= 0) {
+            dwtRemoteScanObject.selectDevice(allDevices[selDevices.selectedIndex - 1]).then(function () {
+              return dwtRemoteScanObject.acquireImage({
+                IfDisableSourceAfterAcquire: true // Scanner source will be disabled/closed automatically after the scan.
+              }, dwtObject);
+            }).then(function () {
+              return dwtRemoteScanObject.closeSource();
+            }).catch(function (exp) {
+              alert(exp.message);
+            });
+          }
+        }
+      }
+    }
+
+    function selectedServices() {
+      var ddlService = document.getElementById('selServices');
+      if (ddlService.selectedIndex >= 0 && allServices && allServices.length > 0) {
+        Dynamsoft.DWT.CreateRemoteScanObjectAsync(allServices[ddlService.selectedIndex - 1]).then(function (obj) {
+          dwtRemoteScanObject = obj;
+          obj.getDevices(Dynamsoft.DWT.EnumDWT_DeviceType.TWAINSCANNER | Dynamsoft.DWT.EnumDWT_DeviceType.ESCLSCANNER).then(function (devices) {
+            allDevices = devices;
+            if (devices && devices.length > 0) {
+              var ddlDevice = document.getElementById('selDevices');
+              ddlDevice.options.length = 0;
+              ddlDevice.options.add(new Option('--Select a device--', '-1'));
+              var i = 0;
+              for (; i < devices.length; i++) {
+                var deviceName = devices[i].displayName;
+                ddlDevice.options.add(new Option(deviceName, i));
+              }
+              ddlDevice.selectedIndex = 0;
+            }
+          }, function (err) {
+            console.log(err);
+          });
+
+        }, function (err) {
+          console.log(err);
+        });
+      }
+    }
+
+    function removeAll() {
+        if (!dwtObject || dwtObject.HowManyImagesInBuffer == 0)
+          return;
+
+        dwtObject.RemoveAllImages();
+      }
+
+      function removeSelected() {
+        if (!dwtObject || dwtObject.HowManyImagesInBuffer == 0)
+          return;
+
+        dwtObject.RemoveImage(dwtObject.CurrentImageIndexInBuffer);
+      }
+
+      function downloadDocument() {
+        if (dwtObject) {
+          if ((document.getElementById("imgTypejpeg")).checked == true) {
+            if (dwtObject.GetImageBitDepth(dwtObject.CurrentImageIndexInBuffer) == 1)
+              dwtObject.ConvertToGrayScale(dwtObject.CurrentImageIndexInBuffer);
+            dwtObject.SaveAsJPEG("DynamicWebTWAIN.jpg", dwtObject.CurrentImageIndexInBuffer);
+          }
+          else if ((document.getElementById("imgTypetiff")).checked == true)
+            dwtObject.SaveAllAsMultiPageTIFF("DynamicWebTWAIN.tiff");
+          else if ((document.getElementById("imgTypepdf")).checked == true)
+            dwtObject.SaveAllAsPDF("DynamicWebTWAIN.pdf");
+        }
+      }
+
+      function openImage() {
+        if (!dwtObject)
+          return;
+        dwtObject.Addon.PDF.SetConvertMode(Dynamsoft.DWT.EnumDWT_ConvertMode.CM_RENDERALL);
+        let ret = dwtObject.LoadImageEx("", Dynamsoft.DWT.EnumDWT_ImageType.IT_ALL);
+      }
+
+  </script>
+</body>
+
+</html>
