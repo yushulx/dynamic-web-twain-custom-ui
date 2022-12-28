@@ -41,6 +41,10 @@ To make `dwt-remote.html` work:
          
         ![Dynamsoft domain certificate](https://www.dynamsoft.com/codepool/img/2022/12/dynamsoft-domain-certificate.png)
     
+    Open `http://<YOUR-IP-ADDRESS>` to verify the proxy service is running.
+    
+    ![Dynamsoft proxy works](https://www.dynamsoft.com/codepool/img/2022/12/dynamsoft-proxy-work.png)
+
 2. Update the license key and the server URL in `dwt-remote.html`.
 
     ```js
